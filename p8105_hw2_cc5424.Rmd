@@ -4,22 +4,31 @@ author: "ChuqiChen"
 date: "2025-09-24"
 output: github_document
 ---
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+problem1
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r}
 
-```{r cars}
-summary(cars)
+library(tidyverse)
+library(readxl)
+library(haven)
+
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+pols_df = read_csv("./data1/pols-month.csv", 
+                   na=c("NA","O",".") 
+                   ) |>
+  janitor::clean_names() |>
+  
+  separate(mon, into = c("year", "month_day"), sep = 4) |>
+  separate(month_day, into = c("month", "day"), sep = 3) |>
+  mutate(
+    month = sub("^-", "", month),
+    day = sub("^-", "", day),
+    month_name = month.name[as.integer(month)]
+  )
+  
+pols_df
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
