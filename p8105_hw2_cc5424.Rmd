@@ -16,19 +16,39 @@ library(haven)
 ```
 
 ```{r}
+
 pols_df = read_csv("./data1/pols-month.csv", 
                    na=c("NA","O",".") 
                    ) |>
   janitor::clean_names() |>
-  
   separate(mon, into = c("year", "month_day"), sep = 4) |>
   separate(month_day, into = c("month", "day"), sep = 3) |>
   mutate(
-    month = sub("^-", "", month),
-    day = sub("^-", "", day),
-    month_name = month.name[as.integer(month)]
-  )
-  
+    month = sub("-", "", month),
+    day = sub("-", "", day),
+    month_name = month.name[as.integer(month)], 
+    president = case_when(
+      prez_gop == 1 ~ "gop",
+      prez_dem == 1 ~ "dem",
+    )
+  ) |>
+  select(-prez_gop, -prez_dem, -day)
+
 pols_df
+
+```
+
+```{r}
+
+snp_df = read_csv("./data1/snp.csv", 
+                   na=c("NA","O",".") 
+                   ) |>
+  janitor::clean_names() |>
+  separate(date, into = c("year", "month", "day"), sep = "/") |>
+  mutate(
+    onth_name = month.name[as.integer(month)]
+  )
+
+snp_df 
 ```
 
