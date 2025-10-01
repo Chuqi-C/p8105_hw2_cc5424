@@ -284,7 +284,24 @@ jan_2020_2021 |>
   print()
 
 ```
+
+```{r}
+library(knitr)
+
+jan_2020_2021 |>
+  select(
+    zip_code, city, neighborhood, 
+    `price_2020-01-31`, `price_2021-01-31`, 
+    price_change, pct_change
+  ) |>
+  kable(format = "markdown", digits = 2)
+
+```
+
 These ZIP codes likely include Manhattan or central Brooklyn areas, which saw sharp rent declines during COVID due to:
 People moving out of the city
 Shift to remote work
 Drop in demand for dense urban rentals
+```{r}
+
+```
