@@ -5,8 +5,6 @@ date: "2025-09-24"
 output: github_document
 ---
 
-problem1
-
 ```{r}
 
 library(tidyverse)
@@ -15,40 +13,278 @@ library(haven)
 
 ```
 
+
+
+problem1
 ```{r}
 
 pols_df = read_csv("./data1/pols-month.csv", 
-                   na=c("NA","O",".") 
+                   na = c("NA","O",".") 
                    ) |>
   janitor::clean_names() |>
-  separate(mon, into = c("year", "month_day"), sep = 4) |>
-  separate(month_day, into = c("month", "day"), sep = 3) |>
+  separate(mon, into = c("year", "month", "day"), sep = "-", convert = TRUE) |>
   mutate(
-    month = sub("-", "", month),
-    day = sub("-", "", day),
     month_name = month.name[as.integer(month)], 
     president = case_when(
       prez_gop == 1 ~ "gop",
       prez_dem == 1 ~ "dem",
     )
   ) |>
-  select(-prez_gop, -prez_dem, -day)
-
-pols_df
+  select(-prez_gop, -prez_dem, -day) |>
+  arrange(year, match(month, month.name)) |>
+  relocate(year, month_name) 
 
 ```
+The dataset has `r nrow(pols_df)` rows and `r ncol(pols_df)` columns.
+Arrange according to year is from 1947 to 2015.
+There are variables including `r names(pols_df)`.
 
 ```{r}
 
-snp_df = read_csv("./data1/snp.csv", 
-                   na=c("NA","O",".") 
+snp_df = 
+  read_csv("./data1/snp.csv", 
+           na = c("NA","O",".") 
+           ) |> 
+  janitor::clean_names() |> 
+  separate(date, into = c("month", "day", "year"), sep = "/", convert = TRUE) |> 
+  mutate(
+    year1 = case_when(
+      year >= 50 ~ year + 1900,
+      year < 50 ~ year + 2000
+      )
+    ) |>
+  mutate( 
+    year = year1, 
+    month_name = month.name[month] 
+    ) |>
+  select(-year, -month, -day) |> 
+  rename(year = year1, 
+         month = month_name) |> 
+  arrange(year, match(month, month.name)) |> 
+  relocate(year, month)
+
+```
+The dataset has `r nrow(snp_df)` rows and `r ncol(snp_df)` columns.
+Arrange according to year is from 1950 to 2015.
+There are variables including `r names(snp_df)`.
+
+```{r}
+
+pols_df = read_csv("./data1/pols-month.csv", 
+                   na = c("NA","O",".") 
                    ) |>
   janitor::clean_names() |>
-  separate(date, into = c("year", "month", "day"), sep = "/") |>
+  separate(mon, into = c("year", "month", "day"), sep = "-", convert = TRUE) |>
   mutate(
-    onth_name = month.name[as.integer(month)]
+    month_name = month.name[as.integer(month)], 
+    president = case_when(
+      prez_gop == 1 ~ "gop",
+      prez_dem == 1 ~ "dem",
+    )
+  ) |>
+  select(-prez_gop, -prez_dem, -day) |>
+  mutate(
+    date = sprintf("%d-%02d", year, month)
+  ) |>
+  arrange(date) |>
+  relocate(date) 
+
+unemployment_df = 
+  read_csv("./data1/unemployment.csv",  
+                   na = c("NA","O",".") 
+                   ) |> 
+  pivot_longer(
+    Jan:Dec,
+    names_to = "month",
+    values_to = "unemployment"
+  ) |>
+  mutate(month_name = month.name[match(month, month.abb)]) |>
+  rename(year = Year) |>
+  mutate(
+    date = sprintf("%d-%02d", year, match(month, month.abb))
   )
 
-snp_df 
+pols_unemp_df = 
+  left_join(pols_df, unemployment_df, by = "date") |>
+  arrange(date)
+
+```
+The dataset has `r nrow(pols_unemp_df)` rows and `r ncol(pols_unemp_df)` columns.
+Arrange according to year is from 1947 to 2015.
+There are variables including `r names(pols_unemp_df)`.
+
+
+
+problem2
+```{r}
+
+mr_df = 
+  read_excel(
+    "./data2/202509 Trash Wheel Collection Data.xlsx", 
+    sheet = "Mr. Trash Wheel", 
+    range = "A2:N709", 
+    na = c("NA","O",".") 
+    ) |>
+  janitor::clean_names() |>
+  select(-dumpster) |>
+  mutate(
+    sports_balls = as.integer(round(sports_balls)), 
+    year = as.integer(year), 
+    wheel = "Mr. Trash Wheel"
+    )
+  
+professor_df = 
+  read_excel(
+    "./data2/202509 Trash Wheel Collection Data.xlsx", 
+    sheet = "Professor Trash Wheel", 
+    range = "A2:M134", 
+    na = c("NA","O",".") 
+    ) |>
+  janitor::clean_names() |>
+  select(-dumpster) |>
+  mutate(
+    sports_balls = NA, 
+    year = as.integer(year), 
+    wheel = "Professor Trash Wheel"
+  )
+
+gwynns_falls_df = 
+  read_excel(
+    "./data2/202509 Trash Wheel Collection Data.xlsx", 
+    sheet = "Gwynns Falls Trash Wheel", 
+    range = "A2:L351", 
+    na = c("NA","O",".") 
+    ) |>
+  janitor::clean_names() |>
+  select(-dumpster) |>
+  mutate(
+    sports_balls = NA, 
+    year = as.integer(year), 
+    wheel = "Gwynns Falls Trash Wheel"
+  )
+
+trash_data = bind_rows(mr_df, professor_df, gwynns_falls_df)
+
+glimpse(trash_data)
+
+n_obs = nrow(trash_data)
+
+prof_total_weight = trash_data |>
+  filter(wheel == "Professor Trash Wheel") |>
+  summarise(total_weight = sum(weight_tons, na.rm = TRUE)) |>
+  pull(total_weight)
+```
+There are `r n_obs` observations in the resulting dataset.
+There are variables including `r names(trash_data)`.
+The total weight of trash collected by Professor Trash Wheel is `r prof_total_weight` tons.
+The total number of cigarette butts collected by Gwynnda in June of 2022 is `r as.integer(sum(trash_data$cigarette_butts[trash_data$wheel == "Gwynns Falls Trash Wheel" & trash_data$month == "June" & trash_data$year == 2022]))`.
+
+
+problem 3
+```{r}
+
+zori_df = 
+  read_csv(
+    "./data3/Zip_zori_uc_sfrcondomfr_sm_month_NYC.csv", 
+    na = c("NA","O",".") 
+    ) |>
+  janitor::clean_names() |>
+  pivot_longer(
+    x2015_01_31:x2024_08_31,
+    names_to = "date",
+    values_to = "prices"
+  ) |>
+  mutate(
+    zip_code = as.character(region_name), 
+    date = str_remove(date, "^x"), 
+    date = str_replace_all(date, "_", "-"), 
+    date = as.Date(date)
+    ) |>
+  select(-region_name, -region_type) |>
+  relocate(zip_code)
+
+zipcodes_df = 
+  read_csv(
+    "./data3/Zip Codes.csv", 
+    na = c("NA","O",".") 
+    ) |>
+  janitor::clean_names() |>
+  mutate(
+    zip_code = as.character(zip_code)
+    ) |>
+  relocate(zip_code)
+
+zori_zip_df = 
+  left_join(zori_df, zipcodes_df, by = "zip_code") |>
+  select(
+    zip_code, city, county_name, neighborhood, 
+    date, prices
+  ) |>
+  arrange(zip_code, date)
+
 ```
 
+3.1
+```{r}
+
+total_obs = nrow(zori_zip_df)
+
+unique_zips = zori_zip_df |>
+  distinct(zip_code) |>
+  nrow()
+
+unique_neighborhoods = zori_zip_df |>
+  distinct(neighborhood) |>
+  nrow()
+
+```
+There are `r total_obs` observations exist.
+`r unique_zips`unique ZIP codes are included.
+There are `r unique_neighborhoods` unique neighborhoods.
+
+3.2
+ZIPs in zipcodes_df but not in zori_df
+```{r}
+
+zips_only_in_zipcodes = setdiff(zipcodes_df$zip_code, zori_df$zip_code)
+zips_only_in_zipcodes
+
+```
+These ZIP codes may be commercial, non-residential, or lack rental data on Zillow.
+For example, ZIPs tied to industrial areas, airports, or government facilities might be excluded.
+
+3.3
+```{r}
+
+jan_2020_2021 = zori_zip_df |>
+  filter(date %in% as.Date(c("2020-01-31", "2021-01-31"))) |>
+  select(zip_code, city, neighborhood, date, prices) |>
+  pivot_wider(
+    names_from = date, 
+    values_from = prices, 
+    names_prefix = "price_",
+    values_fn = mean, 
+    values_fill = NA
+    ) |>
+  mutate(
+    `price_2020-01-31` = as.numeric(`price_2020-01-31`),
+    `price_2021-01-31` = as.numeric(`price_2021-01-31`)
+  ) |>
+  drop_na(`price_2020-01-31`, `price_2021-01-31`) |>
+  mutate(
+    price_change = `price_2021-01-31` - `price_2020-01-31`,
+    pct_change = price_change / `price_2020-01-31` * 100
+  ) |>
+  arrange(price_change) |>
+  slice(1:10)
+
+jan_2020_2021 |>
+  select(zip_code, city, neighborhood, 
+         `price_2020-01-31`, `price_2021-01-31`, price_change, pct_change) |>
+  print()
+
+```
+These ZIP codes likely include Manhattan or central Brooklyn areas, which saw sharp rent declines during COVID due to:
+People moving out of the city
+Shift to remote work
+Drop in demand for dense urban rentals
